@@ -5,35 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Videocurrículum</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   #player { position: fixed; inset: 0; width: 100%; height: 100%; background: #000; }
   video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+
+  /* ---------- Pantalla inicial ---------- */
   #start {
-    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: #000; cursor: pointer; border: 0; padding: 0; width: 100%; height: 100%;
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 28px;
+    background: #000 url("foto.jpg") center / cover no-repeat;
+    cursor: pointer; border: 0; padding: 24px; width: 100%; height: 100%; color: #fff;
   }
-  #start span {
+  /* capa oscura para que el texto se lea sobre la foto */
+  #start::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+  #start > * { position: relative; }
+  #start .play {
     width: 110px; height: 110px; border-radius: 50%; background: #fff;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 10px 40px rgba(0,0,0,.6); transition: transform .15s;
   }
-  #start:hover span { transform: scale(1.06); }
+  #start:hover .play { transform: scale(1.06); }
   #start svg { width: 44px; height: 44px; margin-left: 6px; fill: #000; }
+  #start h1 { margin: 0; font-size: clamp(22px, 4vw, 36px); font-weight: 600; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+  #start p  { margin: 0; font-size: clamp(15px, 2.2vw, 20px); opacity: .9; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+
+  /* ---------- Aviso de salida en pantalla completa ---------- */
+  #hint {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,.7); color: #fff; padding: 10px 18px; border-radius: 999px;
+    font-size: 15px; white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity .4s;
+  }
+  #hint kbd { background: #fff; color: #000; padding: 2px 8px; border-radius: 5px; font-weight: 700; font-family: inherit; }
+  #close {
+    position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(0,0,0,.6); color: #fff; border: 2px solid rgba(255,255,255,.7);
+    font-size: 24px; line-height: 1; cursor: pointer;
+    opacity: 0; transition: opacity .4s;
+  }
+  #player.show-ui #hint, #player.show-ui #close { opacity: 1; }
   .hidden { display: none !important; }
 </style>
 </head>
 <body>
   <div id="player">
     <video id="video" src="video.mp4" playsinline controls controlsList="nodownload"></video>
+    <div id="hint">Prem <kbd>Esc</kbd> o la ✕ per sortir de pantalla completa</div>
+    <button id="close" aria-label="Sortir">✕</button>
   </div>
+
   <button id="start" aria-label="Reproduir">
-    <span><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+    <span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+    <h1>Videocurrículum d'Anna</h1>
+    <p>Fes clic al play per veure'l a pantalla completa</p>
   </button>
 
 <script>
   const btn = document.getElementById('start');
   const video = document.getElementById('video');
   const player = document.getElementById('player');
+  const closeBtn = document.getElementById('close');
+  let uiTimer;
+
+  // Muestra el aviso y la X; se ocultan solos a los 5 s
+  function showUI(ms = 5000) {
+    player.classList.add('show-ui');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(() => player.classList.remove('show-ui'), ms);
+  }
 
   btn.addEventListener('click', async () => {
     btn.classList.add('hidden');
@@ -42,11 +82,29 @@
       else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen(); // iPhone
     } catch (e) {}
     video.play();
+    showUI(6000);
+  });
+
+  // Al mover el ratón o tocar la pantalla, vuelve a aparecer el aviso
+  player.addEventListener('mousemove', () => showUI());
+  player.addEventListener('touchstart', () => showUI(), { passive: true });
+
+  closeBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    video.pause();
   });
 
   video.addEventListener('ended', () => {
     if (document.fullscreenElement) document.exitFullscreen();
-    btn.classList.remove('hidden');
+  });
+
+  // Al salir de pantalla completa (Esc, X o fin del vídeo) vuelve la portada
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      video.pause();
+      player.classList.remove('show-ui');
+      btn.classList.remove('hidden');
+    }
   });
 </script>
 </body>

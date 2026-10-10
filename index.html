@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Videocurrículum</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #player { position: fixed; inset: 0; width: 100%; height: 100%; background: #000; }
+  video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  #start {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #000; cursor: pointer; border: 0; padding: 0; width: 100%; height: 100%;
+  }
+  #start span {
+    width: 110px; height: 110px; border-radius: 50%; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,.6); transition: transform .15s;
+  }
+  #start:hover span { transform: scale(1.06); }
+  #start svg { width: 44px; height: 44px; margin-left: 6px; fill: #000; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div id="player">
+    <video id="video" src="video.mp4" playsinline controls controlsList="nodownload"></video>
+  </div>
+  <button id="start" aria-label="Reproduir">
+    <span><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+  </button>
+
+<script>
+  const btn = document.getElementById('start');
+  const video = document.getElementById('video');
+  const player = document.getElementById('player');
+
+  btn.addEventListener('click', async () => {
+    btn.classList.add('hidden');
+    try {
+      if (player.requestFullscreen) await player.requestFullscreen();
+      else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen(); // iPhone
+    } catch (e) {}
+    video.play();
+  });
+
+  video.addEventListener('ended', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    btn.classList.remove('hidden');
+  });
+</script>
+</body>
+</html>

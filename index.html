@@ -17,7 +17,6 @@
     background: #000 url("foto.jpg") center / cover no-repeat;
     cursor: pointer; border: 0; padding: 24px; width: 100%; height: 100%; color: #fff;
   }
-  /* capa oscura para que el texto se lea sobre la foto */
   #start::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.45); }
   #start > * { position: relative; }
   #start .play {
@@ -62,13 +61,44 @@
   </button>
 
 <script>
+  /* ================== SEGUIMIENTO (Make) ================== */
+  const HOOK = "https://hook.eu2.make.com/k1bbjnk6icngmpbxl4wkv43fwaa17ung";
+  const session = Math.random().toString(36).slice(2, 10);   // id de esta visualización
+  const ua = navigator.userAgent;
+  const device = /iPad|Tablet/i.test(ua) ? "tablet" : /Mobi|Android|iPhone/i.test(ua) ? "mòbil" : "ordinador";
+  const browser = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Chrome\//.test(ua) ? "Chrome"
+                : /Safari\//.test(ua) ? "Safari" : /Firefox\//.test(ua) ? "Firefox" : "altre";
+  const sent = new Set();
+  let maxSecond = 0;
+
+  function track(event, extra = {}) {
+    if (sent.has(event)) return;            // cada hito se envía una sola vez por sesión
+    sent.add(event);
+    const p = new URLSearchParams({
+      event, session,
+      data: new Date().toISOString(),
+      segon: Math.round(video.currentTime || 0),
+      durada: Math.round(video.duration || 0),
+      dispositiu: device, navegador: browser,
+      pantalla: screen.width + "x" + screen.height,
+      idioma: navigator.language,
+      referer: document.referrer || "directe",
+      ...extra
+    });
+    const url = HOOK + "?" + p.toString();
+    if (event === "abandonat" && navigator.sendBeacon) navigator.sendBeacon(url);
+    else fetch(url, { mode: "no-cors", keepalive: true }).catch(() => {});
+  }
+  /* ========================================================= */
+
   const btn = document.getElementById('start');
   const video = document.getElementById('video');
   const player = document.getElementById('player');
   const closeBtn = document.getElementById('close');
   let uiTimer;
 
-  // Muestra el aviso y la X; se ocultan solos a los 5 s
+  track("obert");
+
   function showUI(ms = 5000) {
     player.classList.add('show-ui');
     clearTimeout(uiTimer);
@@ -85,7 +115,6 @@
     showUI(6000);
   });
 
-  // Al mover el ratón o tocar la pantalla, vuelve a aparecer el aviso
   player.addEventListener('mousemove', () => showUI());
   player.addEventListener('touchstart', () => showUI(), { passive: true });
 
@@ -94,11 +123,21 @@
     video.pause();
   });
 
+  video.addEventListener('play', () => track("play"));
+  video.addEventListener('timeupdate', () => {
+    maxSecond = Math.max(maxSecond, video.currentTime);
+    if (video.duration && video.currentTime / video.duration >= 0.5) track("meitat");
+  });
   video.addEventListener('ended', () => {
+    track("final");
     if (document.fullscreenElement) document.exitFullscreen();
   });
 
-  // Al salir de pantalla completa (Esc, X o fin del vídeo) vuelve la portada
+  // Si cierra la pestaña sin acabar, enviamos hasta qué segundo llegó
+  window.addEventListener('pagehide', () => {
+    if (sent.has("play") && !sent.has("final")) track("abandonat", { segon: Math.round(maxSecond) });
+  });
+
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
       video.pause();
